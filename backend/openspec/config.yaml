@@ -1,0 +1,50 @@
+schema: spec-driven
+
+context: |
+  Component: Python backend for a LangGraph-based requirement review agent.
+  Stack: Python, FastAPI, LangGraph, Pydantic, SQLAlchemy, Alembic, PostgreSQL/pgvector.
+  The repository-root openspec/specs directory owns all public contracts.
+  Backend specs cover implementation details such as graph state, model routing,
+  knowledge retrieval, persistence, telemetry, deployment, and backend security.
+  Never duplicate or weaken a root public contract; reference it by path instead.
+  Use pytest, Ruff, and mypy for verification and use conventional commits.
+
+rules:
+  proposal:
+    - Identify every root public contract consumed or changed.
+    - Include security, data residency, and failure-mode impact when relevant.
+  specs:
+    - Include success, failure, authorization, and project-isolation scenarios when applicable.
+  tasks:
+    - List exact test and static-analysis commands.
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

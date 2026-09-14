@@ -1,0 +1,51 @@
+schema: spec-driven
+
+context: |
+  Repository: requirement review agent, organized as a separated frontend/backend project.
+  The root OpenSpec store is the source of truth for contracts shared by all components.
+  Root specs own HTTP API schemas, authentication and authorization, project isolation,
+  common domain models, error responses, compatibility, and cross-component workflows.
+  Component specs must reference these contracts and must not duplicate or weaken them.
+  Use Chinese for product-facing prose and English for identifiers and code.
+  Use conventional commits.
+
+rules:
+  proposal:
+    - State whether the change affects a public contract.
+    - Include a Non-goals section.
+  specs:
+    - Include at least one scenario for every normative requirement.
+    - Describe compatibility and migration impact for contract changes.
+  tasks:
+    - Include validation steps for every affected component.
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
