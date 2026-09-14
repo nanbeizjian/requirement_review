@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: review
+      POSTGRES_USER: review
+      POSTGRES_PASSWORD: review
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U review"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: review
+      MINIO_ROOT_PASSWORD: review-local-only
+    volumes:
+      - minio-data:/data
+
+  api:
+    build: .
+    environment:
+      REVIEW_DATABASE_URL: postgresql+asyncpg://review:review@postgres:5432/review
+      REVIEW_OBJECT_STORE_ENDPOINT: http://minio:9000
+      REVIEW_OBJECT_STORE_BUCKET: requirement-review
+      REVIEW_OBJECT_STORE_ACCESS_KEY: review
+      REVIEW_OBJECT_STORE_SECRET_KEY: review-local-only
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+
+volumes:
+  postgres-data:
+  minio-data:

@@ -1,0 +1,20 @@
+[project]
+name = "requirement-review"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi", "uvicorn[standard]", "pydantic-settings", "python-multipart",
+  "langgraph", "langchain-core", "langchain-openai",
+  "sqlalchemy[asyncio]", "asyncpg", "alembic", "pgvector", "boto3",
+  "opentelemetry-api", "opentelemetry-sdk", "structlog",
+]
+
+[dependency-groups]
+dev = ["pytest", "pytest-asyncio", "httpx", "ruff", "mypy"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+filterwarnings = [
+  "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning:starlette.testclient",
+]
