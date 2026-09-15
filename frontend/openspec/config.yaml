@@ -1,0 +1,19 @@
+schema: spec-driven
+
+context: |
+  Component: React and TypeScript frontend for the requirement review system.
+  Repository-root openspec/specs is authoritative for HTTP APIs, authentication,
+  authorization, project isolation, shared domain schemas, errors, compatibility,
+  and cross-component workflows. Frontend specs reference those contracts and do
+  not duplicate them. Product-facing prose is Chinese; identifiers and code are English.
+
+rules:
+  proposal:
+    - State the related root OpenSpec change and public contract dependency.
+    - Include a Non-goals section.
+  specs:
+    - Include at least one scenario for every normative requirement.
+    - Cover accessibility and role-based UI behavior where applicable.
+  tasks:
+    - Include frontend lint, typecheck, tests, build, and component OpenSpec validation.
+
