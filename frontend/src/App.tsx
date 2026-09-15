@@ -3,6 +3,9 @@ import { SessionProvider, useSession } from "./session/SessionContext";
 import { SessionForm } from "./session/SessionForm";
 import { AppShell } from "./shell/AppShell";
 import { GlobalAlertsProvider } from "./shell/GlobalAlerts";
+import { ProjectReviewListPage } from "./features/reviews/ProjectReviewListPage";
+import { ReviewDetailPage } from "./features/review-detail/ReviewDetailPage";
+import { ReportPage } from "./features/report/ReportPage";
 
 function SessionGate() {
   const { actor, setSession } = useSession();
@@ -18,7 +21,9 @@ export default function App() {
           <Route element={<SessionGate />}>
             <Route element={<AppShell />}>
               <Route index element={<Navigate to="/reviews" replace />} />
-              <Route path="/reviews" element={<div data-testid="placeholder-list">评审列表占位</div>} />
+              <Route path="/reviews" element={<ProjectReviewListPage />} />
+              <Route path="/reviews/:reviewId" element={<ReviewDetailPage />} />
+              <Route path="/reviews/:reviewId/report" element={<ReportPage />} />
               <Route path="*" element={<div>404</div>} />
             </Route>
           </Route>
