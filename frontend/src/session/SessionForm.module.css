@@ -1,0 +1,2 @@
+.form { display: grid; gap: var(--space-3); max-width: 360px; margin: var(--space-6) auto; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-1); background: var(--color-bg); }
+.hint { color: var(--color-muted); margin: 0; font-size: 0.9em; }
