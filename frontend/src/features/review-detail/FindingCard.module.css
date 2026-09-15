@@ -1,0 +1,4 @@
+.card { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-1); display: grid; gap: var(--space-3); }
+.requirement { color: var(--color-muted); margin-left: auto; }
+dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-2) var(--space-4); margin: 0; }
+dt { font-weight: 600; }

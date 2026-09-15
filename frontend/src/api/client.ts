@@ -80,7 +80,24 @@ async function request<T>(
     if (!res.ok) throw await parseApiError(res);
     return (await res.json()) as T;
   }
-  }
+}
+
+async function requestText(
+  actor: Actor,
+  path: string,
+  init: RequestInit & { method?: string; json?: unknown } = {},
+  opts: RequestOptions = {},
+): Promise<string> {
+  const method = init.method ?? "GET";
+  const headers = new Headers(init.headers);
+  headers.set("X-User-ID", actor.userId);
+  headers.set("X-Project-ID", actor.projectId);
+  headers.set("X-Role", actor.role);
+  if (opts.idempotencyKey) headers.set("Idempotency-Key", opts.idempotencyKey);
+  const res = await fetch(`/api/v1${path}`, { method, headers });
+  if (!res.ok) throw await parseApiError(res);
+  return res.text();
+}
 
 export const apiClient = {
   async listReviews(actor: Actor, opts: RequestOptions = {}): Promise<ReviewSummary[]> {
@@ -126,7 +143,7 @@ export const apiClient = {
     );
   },
   async getReport(actor: Actor, reviewId: string, opts: RequestOptions = {}): Promise<string> {
-    return request<string>(
+    return requestText(
       actor,
       `/reviews/${encodeURIComponent(reviewId)}/report`,
       { method: "GET", headers: { Accept: "text/markdown" } },

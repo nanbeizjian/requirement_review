@@ -1,0 +1,2 @@
+.header { display: flex; align-items: center; gap: var(--space-3); }
+.meta { color: var(--color-muted); }
