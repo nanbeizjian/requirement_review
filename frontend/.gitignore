@@ -1,8 +1,0 @@
-node_modules/
-dist/
-coverage/
-.vite/
-.env
-.env.local
-*.log
-tsconfig.tsbuildinfo
