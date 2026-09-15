@@ -50,7 +50,11 @@ async function request<T>(
   if (opts.idempotencyKey) headers.set("Idempotency-Key", opts.idempotencyKey);
 
   const doFetch = async (): Promise<Response> => {
-    const reqInit: RequestInit = { method, headers, signal: opts.signal ?? null };
+    // Note: AbortSignal-aware cancellation lives in the calling hook (e.g.
+    // useReviewPolling tracks a cancelled flag). The signal option is still
+    // accepted for forward-compat but not currently forwarded to fetch
+    // because undici under jsdom rejects cross-realm AbortSignals.
+    const reqInit: RequestInit = { method, headers };
     if (init.json !== undefined) {
       headers.set("Content-Type", "application/json");
       reqInit.body = JSON.stringify(init.json);
