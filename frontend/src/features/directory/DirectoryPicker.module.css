@@ -1,0 +1,5 @@
+.wrap { display: grid; gap: var(--space-3); }
+.controls { display: flex; gap: var(--space-5); flex-wrap: wrap; }
+.field { display: grid; gap: var(--space-1); }
+.ignored { color: var(--color-warn); margin: 0; }
+.summary { margin: 0; }
