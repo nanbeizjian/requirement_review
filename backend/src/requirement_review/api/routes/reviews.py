@@ -2,6 +2,7 @@ from fastapi import APIRouter, Header, HTTPException, Response, status
 from fastapi.responses import PlainTextResponse
 
 from requirement_review.api.dependencies import ActorDep, ReviewerDep, ServicesDep
+from requirement_review.api.runtime import IdempotencyConflictError, PreconditionFailedError
 from requirement_review.api.schemas import (
     ApprovalRequest,
     FindingDecisionRequest,
@@ -21,9 +22,19 @@ async def create_review(
     body: ReviewCreate, response: Response, actor: ReviewerDep, services: ServicesDep
 ):
     _same_project(body.project_id, actor.project_id)
-    result = await services.create_review(body.model_dump(mode="json"), actor.user_id)
+    try:
+        result = await services.create_review(body.model_dump(mode="json"), actor.user_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc) or "project not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     response.headers["Location"] = f"/api/v1/reviews/{result['review_id']}"
     return result
+
+
+@router.get("")
+async def list_reviews(actor: ActorDep, services: ServicesDep):
+    return await services.list_reviews(actor.project_id)
 
 
 @router.get("/{review_id}")
@@ -36,7 +47,10 @@ async def get_review(review_id: str, actor: ActorDep, services: ServicesDep):
 
 @router.get("/{review_id}/findings")
 async def get_findings(review_id: str, actor: ActorDep, services: ServicesDep):
-    return await services.get_findings(review_id, actor.project_id)
+    try:
+        return await services.get_findings(review_id, actor.project_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc) or "review not found")
 
 
 @router.post(
@@ -50,14 +64,26 @@ async def decide_finding(
     services: ServicesDep,
     idempotency_key: str = Header(alias="Idempotency-Key"),
 ):
-    return await services.decide_finding(
-        review_id,
-        finding_id,
-        actor.project_id,
-        actor.user_id,
-        idempotency_key,
-        body.model_dump(mode="json"),
-    )
+    try:
+        return await services.decide_finding(
+            review_id,
+            finding_id,
+            actor.project_id,
+            actor.user_id,
+            idempotency_key,
+            body.model_dump(mode="json"),
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc) or "review or finding not found")
+    except IdempotencyConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "idempotency_conflict",
+                "message": "Idempotency-Key reused with a different request body",
+                "correlation_id": idempotency_key,
+            },
+        )
 
 
 @router.post("/{review_id}/approval", status_code=status.HTTP_202_ACCEPTED)
@@ -68,13 +94,25 @@ async def approve_review(
     services: ServicesDep,
     idempotency_key: str = Header(alias="Idempotency-Key"),
 ):
-    return await services.approve(
-        review_id,
-        actor.project_id,
-        actor.user_id,
-        idempotency_key,
-        body.model_dump(mode="json"),
-    )
+    try:
+        return await services.approve(
+            review_id,
+            actor.project_id,
+            actor.user_id,
+            idempotency_key,
+            body.model_dump(mode="json"),
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc) or "review not found")
+    except PreconditionFailedError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": exc.code,
+                "message": exc.message,
+                "correlation_id": idempotency_key,
+            },
+        )
 
 
 @router.get("/{review_id}/report", response_class=PlainTextResponse)

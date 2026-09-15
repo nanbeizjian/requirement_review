@@ -27,8 +27,16 @@ class FakeServices:
         return {
             "review_id": review_id,
             "project_id": project_id,
+            "source_name": None,
             "status": "WAITING_APPROVAL",
+            "finding_count": 0,
+            "pending_decision_count": 0,
+            "created_at": "2026-01-01T00:00:00+00:00",
+            "failed_dimensions": [],
         }
+
+    async def list_reviews(self, project_id: str) -> list[dict]:
+        return []
 
     async def get_findings(self, review_id: str, project_id: str) -> list[dict]:
         return []
