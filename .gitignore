@@ -7,3 +7,11 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 .env
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/.vite/
+frontend/.env
+frontend/.env.local
