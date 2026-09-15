@@ -25,5 +25,13 @@ export default defineConfig({
       timeout: 30_000,
     },
   ],
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium-system",
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: { executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" },
+      },
+    },
+  ],
 });
