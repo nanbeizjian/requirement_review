@@ -7,6 +7,7 @@ dependencies = [
   "langgraph", "langchain-core", "langchain-openai",
   "sqlalchemy[asyncio]", "asyncpg", "alembic", "pgvector", "boto3",
   "opentelemetry-api", "opentelemetry-sdk", "structlog",
+  "langsmith>=0.1",
 ]
 
 [dependency-groups]
