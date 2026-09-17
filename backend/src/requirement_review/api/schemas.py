@@ -7,7 +7,7 @@ from requirement_review.domain.models import DataPolicy, ReviewDimension
 
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    data_policy: DataPolicy = DataPolicy.LOCAL_ONLY
+    data_policy: DataPolicy = DataPolicy.CLOUD_ALLOWED
 
 
 class ReviewCreate(BaseModel):

@@ -13,9 +13,9 @@ export interface SubmissionFile {
 // 后端 ReviewCreate.data_policy 为必填字段，且服务层要求提交值与项目
 // data_policy 完全一致（不一致返回 422）。前端 Session/Actor 未携带项目
 // data_policy，后端亦无查询项目策略的接口，因此无法动态读取；此处使用与
-// 后端 ProjectCreate 默认值一致的 local_only（最小权限默认策略），
+// 后端 ProjectCreate 默认值一致的 cloud_allowed（默认上云策略），
 // 默认路径创建的项目（未显式指定 data_policy）均为该值。
-const DEFAULT_DATA_POLICY: DataPolicy = "local_only";
+const DEFAULT_DATA_POLICY: DataPolicy = "cloud_allowed";
 
 export type SubmissionStatus = "pending" | "submitting" | "submitted" | "failed";
 
