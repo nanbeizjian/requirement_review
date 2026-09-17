@@ -145,8 +145,11 @@ class OpenAICompatibleClient:
         last_exc: Exception | None = None
         while attempt <= self.max_retries:
             try:
+                # NOTE: a shared AsyncHTTPTransport across concurrent reviews
+                # causes upstream connection errors (httpx reuses keep-alive
+                # connections from the shared pool concurrently). Use a fresh
+                # client per call so each request owns its own connection.
                 async with httpx.AsyncClient(
-                    transport=self._transport,
                     timeout=self.timeout_s,
                 ) as client:
                     response = await client.post(url, headers=headers, content=body)
