@@ -41,6 +41,19 @@ class ReviewRecord:
     findings_locked: bool = False  # when True, graph snapshots do not overwrite findings
 
 
+def _payloads_match(stored: dict, incoming: dict) -> bool:
+    """Equality for the fields covered by the idempotency contract.
+
+    Other fields on the request body (e.g. unrelated metadata) are ignored so
+    that benign additive changes do not produce spurious 409s.
+    """
+    fields = ("action", "comment", "dimensions", "findings")
+    for field in fields:
+        if stored.get(field) != incoming.get(field):
+            return False
+    return True
+
+
 class IdempotencyConflictError(Exception):
     """Raised when a decision request reuses an Idempotency-Key with a different body."""
 
@@ -74,10 +87,15 @@ class InMemoryApplicationServices:
     def __init__(self, model_gateway=None) -> None:
         self.model_gateway = model_gateway or EmptyModelGateway()
         self.projects: dict[str, dict] = {}
+        # project_members[(project_id, user_id)] = role, mirrors ProjectMemberTable
+        self.project_members: dict[tuple[str, str], str] = {}
         self.knowledge_documents: list[tuple[str, str, int, str]] = []
         self.reviews: dict[str, ReviewRecord] = {}
         # decisions[(review_id, finding_id, idempotency_key)] = {action, comment, actor_id, decided_at}
         self.decisions: dict[tuple[str, str, str], dict] = {}
+        # approvals_by_key[(review_id, idempotency_key)] = {payload, response}
+        # enforces the public-contract idempotency clause on POST /reviews/{id}/approval
+        self.approvals_by_key: dict[tuple[str, str], dict] = {}
         self._semaphore = asyncio.Semaphore(5)
 
     async def create_project(self, name: str, data_policy: str, actor_id: str) -> dict:
@@ -89,6 +107,7 @@ class InMemoryApplicationServices:
             "owner": actor_id,
         }
         self.projects[project_id] = row
+        self.project_members[(project_id, actor_id)] = "admin"
         return row
 
     async def add_knowledge(
@@ -224,6 +243,14 @@ class InMemoryApplicationServices:
         payload: dict,
     ) -> dict:
         record = self._require_review(review_id, project_id)
+        # Idempotency gate: replay identical bodies, reject conflicting ones.
+        # See public-contracts/spec.md `Human approval` for the contract.
+        approval_key = (review_id, idempotency_key)
+        existing = self.approvals_by_key.get(approval_key)
+        if existing is not None:
+            if _payloads_match(existing["payload"], payload):
+                return existing["response"]
+            raise IdempotencyConflictError(existing["payload"])
         # Finalization gate: every finding must have latest decision accept/reject.
         if record.findings:
             undecided = []
@@ -247,7 +274,9 @@ class InMemoryApplicationServices:
                 failed_dimensions=record.failed_dimensions,
             )
             record.report = render_markdown(review, record.findings, record.approvals)
-        return {"review_id": review_id, "status": record.status}
+        response = {"review_id": review_id, "status": record.status}
+        self.approvals_by_key[approval_key] = {"payload": payload, "response": response}
+        return response
 
     async def get_report(self, review_id: str, project_id: str) -> str | None:
         return self._require_review(review_id, project_id).report

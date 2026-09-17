@@ -1,12 +1,21 @@
 import { useCallback, useRef, useState } from "react";
 import { apiClient, type Actor } from "../../api/client";
 import { useSession } from "../../session/SessionContext";
+import { useReviewsRefresher } from "../reviews/ReviewsRefreshContext";
 import { basename } from "../../lib/paths";
+import type { DataPolicy } from "../../api/types";
 
 export interface SubmissionFile {
   name: string;
   text: string;
 }
+
+// 后端 ReviewCreate.data_policy 为必填字段，且服务层要求提交值与项目
+// data_policy 完全一致（不一致返回 422）。前端 Session/Actor 未携带项目
+// data_policy，后端亦无查询项目策略的接口，因此无法动态读取；此处使用与
+// 后端 ProjectCreate 默认值一致的 local_only（最小权限默认策略），
+// 默认路径创建的项目（未显式指定 data_policy）均为该值。
+const DEFAULT_DATA_POLICY: DataPolicy = "local_only";
 
 export type SubmissionStatus = "pending" | "submitting" | "submitted" | "failed";
 
@@ -44,6 +53,7 @@ const DEFAULT_CONCURRENCY = 3;
 
 export function useDirectorySubmission(options: UseDirectorySubmissionOptions = {}): UseDirectorySubmissionResult {
   const { actor } = useSession();
+  const { requestRefresh } = useReviewsRefresher();
   const concurrency = options.concurrency ?? DEFAULT_CONCURRENCY;
   const [items, setItems] = useState<SubmissionItem[]>([]);
   const nextId = useRef(0);
@@ -51,6 +61,10 @@ export function useDirectorySubmission(options: UseDirectorySubmissionOptions = 
   const active = useRef(0);
   const actorRef = useRef<Actor | null>(actor);
   actorRef.current = actor;
+  const requestRefreshRef = useRef(requestRefresh);
+  requestRefreshRef.current = requestRefresh;
+  // 每次 submit/retry 批次内是否曾经成功过；批次结束时按结果通知一次刷新。
+  const batchHadSuccessRef = useRef(false);
 
   const updateItem = useCallback((id: number, patch: Partial<SubmissionItem>) => {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
@@ -74,11 +88,12 @@ export function useDirectorySubmission(options: UseDirectorySubmissionOptions = 
     try {
       const res = await apiClient.createReview(a, {
         project_id: a.projectId,
-        data_policy: "local_only",
+        data_policy: DEFAULT_DATA_POLICY,
         text: next.file.text,
         source_name: basename(next.file.name),
       });
       updateItem(next.id, { status: "submitted", reviewId: res.review_id });
+      batchHadSuccessRef.current = true;
     } catch (e) {
       const err = e as { message?: string; correlationId?: string };
       updateItem(next.id, { status: "failed", errorMessage: err.message ?? "提交失败", correlationId: err.correlationId ?? "" });
@@ -92,24 +107,43 @@ export function useDirectorySubmission(options: UseDirectorySubmissionOptions = 
     for (let i = 0; i < concurrency; i += 1) void processOne();
   }, [concurrency, processOne]);
 
-  const submit = useCallback(async (files: readonly SubmissionFile[]) => {
-    enqueue(files);
-    pump();
-    await new Promise<void>((resolve) => {
-      const tick = () => {
-        if (queue.current.length === 0 && active.current === 0) resolve();
-        else setTimeout(tick, 20);
-      };
-      tick();
-    });
-  }, [enqueue, pump]);
+  const waitForDrain = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        const tick = () => {
+          if (queue.current.length === 0 && active.current === 0) resolve();
+          else setTimeout(tick, 20);
+        };
+        tick();
+      }),
+    [],
+  );
 
-  const retry = useCallback(async (id: number) => {
-    const item = items.find((i) => i.id === id);
-    if (!item || item.status !== "failed") return;
-    queue.current.push({ id, file: { name: item.name, text: item.text } });
-    pump();
-  }, [items, pump]);
+  const submit = useCallback(
+    async (files: readonly SubmissionFile[]) => {
+      batchHadSuccessRef.current = false;
+      enqueue(files);
+      pump();
+      await waitForDrain();
+      // 整个批次完成后再统一通知一次刷新信号；与 ReviewsRefreshContext 自身的
+      // 同 tick 合并叠加，确保并发多文件也只发一次 GET /api/v1/reviews。
+      if (batchHadSuccessRef.current) requestRefreshRef.current();
+    },
+    [enqueue, pump, waitForDrain],
+  );
+
+  const retry = useCallback(
+    async (id: number) => {
+      const item = items.find((i) => i.id === id);
+      if (!item || item.status !== "failed") return;
+      batchHadSuccessRef.current = false;
+      queue.current.push({ id, file: { name: item.name, text: item.text } });
+      pump();
+      await waitForDrain();
+      if (batchHadSuccessRef.current) requestRefreshRef.current();
+    },
+    [items, pump, waitForDrain],
+  );
 
   const summary: SubmissionSummary = {
     total: items.length,
