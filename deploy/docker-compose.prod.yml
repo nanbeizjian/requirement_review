@@ -1,0 +1,78 @@
+# requirement_review 生产部署栈
+# 使用:  docker compose -f deploy/docker-compose.prod.yml up -d --build
+# 配置:  在 deploy/.env 中覆盖默认值（POSTGRES_PASSWORD / MINIO_ROOT_USER / REVIEW_MODEL_API_KEY 等）
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: review
+      POSTGRES_USER: review
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-review}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U review"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-review}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-review-local-only}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../backend
+    environment:
+      REVIEW_DATABASE_URL: postgresql+asyncpg://review:${POSTGRES_PASSWORD:-review}@postgres:5432/review
+      REVIEW_OBJECT_STORE_ENDPOINT: http://minio:9000
+      REVIEW_OBJECT_STORE_BUCKET: requirement-review
+      REVIEW_OBJECT_STORE_ACCESS_KEY: ${MINIO_ROOT_USER:-review}
+      REVIEW_OBJECT_STORE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-review-local-only}
+      # 模型网关：不设 REVIEW_MODEL_API_KEY 时走 EmptyModelGateway（本地空评审）
+      REVIEW_MODEL_BACKEND: ${REVIEW_MODEL_BACKEND:-}
+      REVIEW_MODEL_PROVIDER: ${REVIEW_MODEL_PROVIDER:-minimax}
+      REVIEW_MODEL_BASE_URL: ${REVIEW_MODEL_BASE_URL:-https://api.minimaxi.com/v1}
+      REVIEW_MODEL_NAME: ${REVIEW_MODEL_NAME:-MiniMax-M3}
+      REVIEW_MODEL_API_KEY: ${REVIEW_MODEL_API_KEY:-}
+      REVIEW_MODEL_TIMEOUT_S: ${REVIEW_MODEL_TIMEOUT_S:-60}
+      REVIEW_MODEL_MAX_RETRIES: ${REVIEW_MODEL_MAX_RETRIES:-3}
+      REVIEW_MODEL_CONCURRENCY: ${REVIEW_MODEL_CONCURRENCY:-2}
+    # api 容器启动时先执行 alembic upgrade head 自动建表/升级，再拉起 uvicorn
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    volumes:
+      # nginx 配置由 compose 挂载，便于修改无需重建镜像
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  minio-data:
