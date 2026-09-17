@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-### Requirement: Root contract authority (clarified)
+### Requirement: Root contract authority
 
 The repository-root `openspec/specs/` directory SHALL be the authoritative source for public contracts. Component specifications SHALL reference these contracts and SHALL NOT define conflicting copies.
 

@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-### Requirement: Human approval (clarified)
+### Requirement: Human approval
 
 A review report SHALL NOT become final until an authorized human reviewer explicitly approves it. Approval and rejection operations SHALL be auditable and idempotent.
 
