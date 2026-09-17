@@ -5,6 +5,7 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, it } from "vitest";
 import { ProjectReviewListPage } from "./ProjectReviewListPage";
 import { SessionProvider } from "../../session/SessionContext";
+import { ReviewsRefreshProvider } from "./ReviewsRefreshContext";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 const server = setupServer();
@@ -16,12 +17,14 @@ function wrap(node: React.ReactNode) {
   sessionStorage.setItem("rr:session:v1", JSON.stringify({ userId: "u", projectId: "p", role: "reviewer" }));
   return render(
     <SessionProvider>
-      <MemoryRouter initialEntries={["/reviews"]}>
-        <Routes>
-          <Route path="/reviews" element={node} />
-          <Route path="/reviews/:reviewId" element={<div data-testid="detail">detail</div>} />
-        </Routes>
-      </MemoryRouter>
+      <ReviewsRefreshProvider>
+        <MemoryRouter initialEntries={["/reviews"]}>
+          <Routes>
+            <Route path="/reviews" element={node} />
+            <Route path="/reviews/:reviewId" element={<div data-testid="detail">detail</div>} />
+          </Routes>
+        </MemoryRouter>
+      </ReviewsRefreshProvider>
     </SessionProvider>,
   );
 }

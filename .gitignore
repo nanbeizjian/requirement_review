@@ -7,3 +7,6 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 .env
+.idea/
+e2e-out/
+.git.invalid-copy/

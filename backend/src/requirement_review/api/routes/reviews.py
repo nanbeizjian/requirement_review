@@ -104,6 +104,15 @@ async def approve_review(
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc) or "review not found")
+    except IdempotencyConflictError:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "idempotency_conflict",
+                "message": "Idempotency-Key reused with a different request body",
+                "correlation_id": idempotency_key,
+            },
+        )
     except PreconditionFailedError as exc:
         raise HTTPException(
             status_code=409,

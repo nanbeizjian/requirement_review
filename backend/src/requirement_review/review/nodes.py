@@ -109,8 +109,8 @@ class ReviewServices:
         dimension = ReviewDimension(state["active_dimension"])
         findings: list[ReviewFinding] = []
         error = None
-        try:
-            for requirement in state["requirements"]:
+        for requirement in state["requirements"]:
+            try:
                 result = await self.model_gateway.review(
                     project_id=state["project_id"],
                     data_policy=state["data_policy"],
@@ -129,15 +129,17 @@ class ReviewServices:
                     raise ValueError("mismatched review scope")
                 self.validate_findings(state, validated)
                 findings.extend(validated)
-        except Exception as exc:  # noqa: BLE001 - one provider failure must not abort siblings
-            # Never persist exception text: model/transport errors can contain document bodies.
-            if isinstance(exc, PermissionError):
-                error = "permission_denied"
-            elif isinstance(exc, EvidenceInvalidError):
-                error = "evidence_invalid"
-            else:
+            except Exception as exc:  # noqa: BLE001 - provider boundary; persist safe codes only
+                # Never persist exception text: model/transport errors can contain document bodies.
+                if isinstance(exc, PermissionError):
+                    error = "permission_denied"
+                    findings = []
+                    break
+                if isinstance(exc, EvidenceInvalidError):
+                    error = "evidence_invalid"
+                    findings = []
+                    break
                 error = "review_failed"
-            findings = []
         return {
             "dimension_results": {
                 dimension.value: {"findings": findings, "error": error}

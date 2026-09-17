@@ -185,6 +185,34 @@ async def test_one_dimension_failure_is_visible_and_can_recover(initial_state):
     assert len(recovered["findings"]) == 8
 
 
+async def test_requirement_level_model_failure_preserves_other_findings(
+    initial_state,
+):
+    class OneRequirementFails(ReviewModel):
+        async def review(self, **kwargs):
+            if (
+                kwargs["dimension"] == ReviewDimension.SECURITY
+                and kwargs["requirement"].requirement_id == "REQ-002"
+            ):
+                raise RuntimeError("private requirement text must not leak")
+            return await super().review(**kwargs)
+
+    text = "# Login\n\nUsers can log in.\n\nUsers can log out."
+    result = await make_graph(OneRequirementFails()).ainvoke(
+        {**initial_state, "document_text": text}, config()
+    )
+
+    assert result["status"] == "WAITING_APPROVAL"
+    assert result["failed_dimensions"] == ["security"]
+    assert len(result["findings"]) == 15
+    assert [
+        finding.requirement_id
+        for finding in result["findings"]
+        if finding.dimension == ReviewDimension.SECURITY
+    ] == ["REQ-001"]
+    assert "private requirement text" not in str(result)
+
+
 async def test_all_dimensions_failing_blocks_approval(initial_state):
     graph = make_graph(ReviewModel(failures=set(ReviewDimension)))
     result = await graph.ainvoke(initial_state, config())

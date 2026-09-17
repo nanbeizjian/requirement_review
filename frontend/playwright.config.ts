@@ -11,26 +11,19 @@ export default defineConfig({
     baseURL: "http://localhost:5173",
     trace: "retain-on-failure",
   },
-  webServer: [
-    {
-      command: "cd ../backend && .venv/bin/uvicorn requirement_review.api.app:app --host 127.0.0.1 --port 8000 --log-level warning",
-      url: "http://localhost:8000/api/v1/projects",
-      reuseExistingServer: false,
-      timeout: 30_000,
-    },
-    {
-      command: "npm run dev",
-      url: "http://localhost:5173",
-      reuseExistingServer: true,
-      timeout: 30_000,
-    },
-  ],
+  // webServer omitted: backend (uvicorn :8000) and frontend (vite :5173) are
+  // expected to be running externally. Launch them with:
+  //   cd backend && .venv/bin/python -m uvicorn requirement_review.api.app:app --host 127.0.0.1 --port 8000
+  //   cd frontend && npm run dev
   projects: [
     {
-      name: "chromium-system",
+      name: "chromium-headed",
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: { executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" },
+        launchOptions: {
+          executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+          headless: false,
+        },
       },
     },
   ],

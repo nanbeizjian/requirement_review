@@ -6,6 +6,7 @@ import { GlobalAlertsProvider } from "./shell/GlobalAlerts";
 import { ProjectReviewListPage } from "./features/reviews/ProjectReviewListPage";
 import { ReviewDetailPage } from "./features/review-detail/ReviewDetailPage";
 import { ReportPage } from "./features/report/ReportPage";
+import { ReviewsRefreshProvider } from "./features/reviews/ReviewsRefreshContext";
 
 function SessionGate() {
   const { actor, setSession } = useSession();
@@ -17,17 +18,19 @@ export default function App() {
   return (
     <SessionProvider>
       <GlobalAlertsProvider>
-        <Routes>
-          <Route element={<SessionGate />}>
-            <Route element={<AppShell />}>
-              <Route index element={<Navigate to="/reviews" replace />} />
-              <Route path="/reviews" element={<ProjectReviewListPage />} />
-              <Route path="/reviews/:reviewId" element={<ReviewDetailPage />} />
-              <Route path="/reviews/:reviewId/report" element={<ReportPage />} />
-              <Route path="*" element={<div>404</div>} />
+        <ReviewsRefreshProvider>
+          <Routes>
+            <Route element={<SessionGate />}>
+              <Route element={<AppShell />}>
+                <Route index element={<Navigate to="/reviews" replace />} />
+                <Route path="/reviews" element={<ProjectReviewListPage />} />
+                <Route path="/reviews/:reviewId" element={<ReviewDetailPage />} />
+                <Route path="/reviews/:reviewId/report" element={<ReportPage />} />
+                <Route path="*" element={<div>404</div>} />
+              </Route>
             </Route>
-          </Route>
-        </Routes>
+          </Routes>
+        </ReviewsRefreshProvider>
       </GlobalAlertsProvider>
     </SessionProvider>
   );

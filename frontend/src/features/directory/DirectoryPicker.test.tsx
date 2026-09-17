@@ -5,6 +5,7 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 import { DirectoryPicker } from "./DirectoryPicker";
 import { SessionProvider } from "../../session/SessionContext";
+import { ReviewsRefreshProvider } from "../reviews/ReviewsRefreshContext";
 
 const server = setupServer();
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -14,7 +15,11 @@ afterAll(() => server.close());
 function wrap(node: React.ReactNode) {
   sessionStorage.setItem("rr:session:v1", JSON.stringify({ userId: "u", projectId: "p", role: "reviewer" }));
   server.use(http.post("/api/v1/reviews", () => HttpResponse.json({ review_id: "r", status: "PENDING" }, { status: 202 })));
-  return render(<SessionProvider>{node}</SessionProvider>);
+  return render(
+    <SessionProvider>
+      <ReviewsRefreshProvider>{node}</ReviewsRefreshProvider>
+    </SessionProvider>,
+  );
 }
 
 it("renders a directory input and a multi-file fallback", () => {

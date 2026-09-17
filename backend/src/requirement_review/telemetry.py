@@ -99,3 +99,24 @@ async def telemetry_middleware(request: Request, call_next):
         thread_id=request.headers.get("X-Thread-ID"),
     )
     return response
+
+
+def mask_api_key(value: str | None) -> str:
+    """Mask a credential for safe logging.
+
+    Returns `<4 chars masked>` when the value is too short to safely reveal
+    even a prefix. The output is deterministic for a given input so log
+    deduplication tools still work.
+    """
+    if not value:
+        return "<absent>"
+    if len(value) <= 4:
+        return "<masked>"
+    if value.startswith("lsv2_"):
+        return f"{value[:9]}...{value[-2:]}" if len(value) > 11 else value[:9] + "..."
+    return f"{value[:4]}***"
+
+
+def masked_env(name: str) -> str:
+    """Read an environment variable and return its masked representation form."""
+    return mask_api_key(os.environ.get(name))

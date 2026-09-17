@@ -10,20 +10,28 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    ports:
+      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
     command: server /data --console-address :9001
     environment:
       MINIO_ROOT_USER: review
       MINIO_ROOT_PASSWORD: review-local-only
+    ports:
+      - "9000:9000"
+      - "9001:9001"
     volumes:
       - minio-data:/data
 
   api:
-    build: .
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
     environment:
       REVIEW_DATABASE_URL: postgresql+asyncpg://review:review@postgres:5432/review
       REVIEW_OBJECT_STORE_ENDPOINT: http://minio:9000

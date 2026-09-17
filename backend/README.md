@@ -10,8 +10,10 @@ docker compose up -d postgres minio
 python -m venv .venv
 .venv/bin/pip install -e . pytest pytest-asyncio
 .venv/bin/alembic upgrade head
-.venv/bin/uvicorn requirement_review.api.app:app --reload
+.venv/bin/uvicorn requirement_review.api.app:app --reload --env-file .env
 ```
+
+`--env-file .env` 让 uvicorn 在 fork 前把 `backend/.env` 注入到 `os.environ`，模型网关、LangSmith 等设置都从同一份 `.env` 读取（`.env` 已 gitignore；复制 `.env.example` 后填值）。
 
 OpenAPI 位于 `http://localhost:8000/docs`。默认应用使用进程内运行时和安全的空模型提供者，方便验证 API 与人工审批流程；生产部署应在 `create_app()` 中注入数据库仓储、对象存储及 `PolicyModelGateway`。
 
@@ -53,6 +55,29 @@ curl http://localhost:8000/api/v1/reviews/REVIEW_ID/report \
 - `cloud_redacted`：需求正文、证据引用和知识正文递归脱敏后才调用云模型。
 
 生产代码通过 `PolicyModelGateway` 注入本地与云端 OpenAI-compatible 调用器。密钥只从环境或密钥服务读取，不写入配置、日志或报告。
+
+真实模型后端优先读取通用配置，便于切换 MiniMax、OpenAI-compatible 代理或其他兼容服务。把下列变量写入 `backend/.env`（从 `.env.example` 复制后修改，启动时通过 `--env-file .env` 自动加载，无需 `export`）：
+
+```bash
+REVIEW_MODEL_BACKEND=real
+REVIEW_MODEL_PROVIDER=minimax              # minimax 或 openai_compatible
+REVIEW_MODEL_BASE_URL=https://api.minimaxi.com/v1
+REVIEW_MODEL_NAME=MiniMax-M3
+REVIEW_MODEL_API_KEY=...
+REVIEW_MODEL_TIMEOUT_S=60
+REVIEW_MODEL_MAX_RETRIES=3
+REVIEW_MODEL_CONCURRENCY=2
+```
+
+为兼容已有本地部署，`REVIEW_MODEL_PROVIDER=minimax` 或未显式设置 provider 时，仍会回退读取：
+
+```bash
+MINIMAX_BASE_URL=https://api.minimaxi.com/v1
+MINIMAX_MODEL=MiniMax-M3
+MINIMAX_API_KEY=...
+```
+
+同时存在时，`REVIEW_MODEL_*` 优先于 `MINIMAX_*`。不要把 API Key 写入仓库、前端代码、日志或报告。
 
 ## 测试
 
